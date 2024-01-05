@@ -14,6 +14,8 @@ ARCH=arm64
 CROSS_COMPILE=aarch64-none-linux-gnu-
 CURRENT_DIR=$(dirname "$(realpath "$0")")
 NUM_CORES=$(nproc)
+TOOLCHAIN_PATH=/usr/local/bin
+TOOLCHAIN_PACKAGE=gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu
 
 if [ $# -lt 1 ]
 then
@@ -25,12 +27,25 @@ fi
 
 if [ -d "$OUTDIR" ]; then
     echo "$OUTDIR exists, deleting..."
-    rm -rf "$OUTDIR"
+    sudo rm -rf "$OUTDIR"
 fi
 
 mkdir -p "$OUTDIR"
 
 cd "$OUTDIR"
+
+# Install toolchain
+if [ ! -e ${TOOLCHAIN_PATH}/${TOOLCHAIN_PACKAGE}/bin/aarch64-none-linux-gnu-gcc ]; then
+    echo "Installing $ARCH cross toolchain to $TOOLCHAIN_PATH"
+    cd "$OUTDIR"
+    wget -q --show-progress -O ${TOOLCHAIN_PACKAGE}.tar.xz "https://developer.arm.com/-/media/Files/downloads/gnu-a/10.2-2020.11/binrel/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu.tar.xz?revision=972019b5-912f-4ae6-864a-f61f570e2e7e&rev=972019b5912f4ae6864af61f570e2e7e&hash=90B272942CAC63CBE2787E5F43E7B2C6D0AB20D6"
+    md5sum ${TOOLCHAIN_PACKAGE}.tar.xz
+    sudo tar -xJf ${TOOLCHAIN_PACKAGE}.tar.xz -C ${TOOLCHAIN_PATH}
+else
+    echo "$ARCH cross toolchain already installed in $TOOLCHAIN_PATH"
+fi
+
+# Download the kernel source
 if [ ! -d "${OUTDIR}/linux-stable" ]; then
     #Clone only if the repository does not exist.
 	echo "CLONING GIT LINUX STABLE VERSION ${KERNEL_VERSION} IN ${OUTDIR}"
@@ -110,7 +125,7 @@ echo "Copying Library dependencies to rootfs"
 cd "$OUTDIR"/rootfs
 
 # ld-linux-aarch64.so.1
-find /usr/local/bin/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/ -name "ld-linux-aarch64.so.1" -exec sh -c '
+find ${TOOLCHAIN_PATH}/${TOOLCHAIN_PACKAGE}/ -name "ld-linux-aarch64.so.1" -exec sh -c '
 SYMLINK="{}"
 TARGET="$(readlink -f $SYMLINK)"
 
@@ -123,7 +138,7 @@ ls -l lib/ld*
 ' \;
 
 # libm.so.6
-find /usr/local/bin/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/ -name "libm.so.6" -exec sh -c '
+find ${TOOLCHAIN_PATH}/${TOOLCHAIN_PACKAGE}/ -name "libm.so.6" -exec sh -c '
 SYMLINK="{}"
 TARGET="$(readlink -f $SYMLINK)"
 
@@ -136,7 +151,7 @@ ls -l lib64/libm*
 ' \;
 
 # libc.so.6
-find /usr/local/bin/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/ -name "libc.so.6" -exec sh -c '
+find ${TOOLCHAIN_PATH}/${TOOLCHAIN_PACKAGE}/ -name "libc.so.6" -exec sh -c '
 SYMLINK="{}"
 TARGET="$(readlink -f $SYMLINK)"
 
@@ -149,7 +164,7 @@ ls -l lib64/libc*
 ' \;
 
 # libresolv.so.2
-find /usr/local/bin/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/ -name "libresolv.so.2" -exec sh -c '
+find ${TOOLCHAIN_PATH}/${TOOLCHAIN_PACKAGE}/ -name "libresolv.so.2" -exec sh -c '
 SYMLINK="{}"
 TARGET="$(readlink -f $SYMLINK)"
 
