@@ -23,6 +23,11 @@ else
 	echo "Using passed directory ${OUTDIR} for output"
 fi
 
+if [ -d "$OUTDIR" ]; then
+    echo "$OUTDIR exists, deleting..."
+    rm -rf "$OUTDIR"
+fi
+
 mkdir -p "$OUTDIR"
 
 cd "$OUTDIR"
@@ -104,20 +109,59 @@ ${CROSS_COMPILE}readelf -a bin/busybox | grep "Shared library"
 echo "Copying Library dependencies to rootfs"
 cd "$OUTDIR"/rootfs
 
-find /usr/local/bin/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/ -name "ld-linux-aarch64.so.1" -exec sh -c 'cp "$(readlink -f {})" lib/ && ln -sf "$(basename $(readlink -f {}))" lib/ld-linux-aarch64.so.1' \;
-find /usr/local/bin/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/ -name "libm.so.6" -exec sh -c 'cp "$(readlink -f {})" lib64/ && ln -sf "$(basename $(readlink -f {}))" lib64/libm.so.6' \;
-find /usr/local/bin/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/ -name "libresolv.so.2" -exec sh -c 'cp "$(readlink -f {})" lib64/ && ln -sf "$(basename $(readlink -f {}))" lib64/libresolv.so.2' \;
-find /usr/local/bin/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/ -name "libc.so.6" -exec sh -c 'cp "$(readlink -f {})" lib64/ && ln -sf "$(basename $(readlink -f {}))" lib64/libc.so.6' \;
+# ld-linux-aarch64.so.1
+find /usr/local/bin/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/ -name "ld-linux-aarch64.so.1" -exec sh -c '
+SYMLINK="{}"
+TARGET="$(readlink -f $SYMLINK)"
 
-#find /usr/local/bin/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/ -name "ld-linux-aarch64.so.1" -exec cp -L '{}' lib \;
-#find /usr/local/bin/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/ \( -name "libm.so.6" -o -name "libresolv.so.2" -o -name "libc.so.6" \) -exec cp -L -r '{}' lib64 \;
+echo "Symlink path: $SYMLINK"
+echo "Target path : $TARGET"
 
-echo "lib contains:"
-ls -l lib
-echo "lib64 contains:"
-ls -l lib64
+cp "$TARGET" lib
+ln -sf "$(basename $TARGET)" lib/ld-linux-aarch64.so.1
+ls -l lib/ld*
+' \;
 
-# SKIP ** TODO: Make device nodes
+# libm.so.6
+find /usr/local/bin/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/ -name "libm.so.6" -exec sh -c '
+SYMLINK="{}"
+TARGET="$(readlink -f $SYMLINK)"
+
+echo "Symlink path: $SYMLINK"
+echo "Target path : $TARGET"
+
+cp "$TARGET" lib64
+ln -sf "$(basename $TARGET)" lib64/libm.so.6
+ls -l lib64/libm*
+' \;
+
+# libc.so.6
+find /usr/local/bin/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/ -name "libc.so.6" -exec sh -c '
+SYMLINK="{}"
+TARGET="$(readlink -f $SYMLINK)"
+
+echo "Symlink path: $SYMLINK"
+echo "Target path : $TARGET"
+
+cp "$TARGET" lib64
+ln -sf "$(basename $TARGET)" lib64/libc.so.6
+ls -l lib64/libc*
+' \;
+
+# libresolv.so.2
+find /usr/local/bin/gcc-arm-10.2-2020.11-x86_64-aarch64-none-linux-gnu/ -name "libresolv.so.2" -exec sh -c '
+SYMLINK="{}"
+TARGET="$(readlink -f $SYMLINK)"
+
+echo "Symlink path: $SYMLINK"
+echo "Target path : $TARGET"
+
+cp "$TARGET" lib64
+ln -sf "$(basename $TARGET)" lib64/libresolv.so.2
+ls -l lib64/libresolv*
+' \;
+
+# SKIP ** Make device nodes
 
 # Clean and build the writer utility
 cd "$CURRENT_DIR"
